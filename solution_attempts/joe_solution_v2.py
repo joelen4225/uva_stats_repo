@@ -1,6 +1,7 @@
 # This Attempt Will Focus on Using LightGBM
 # The First Section, Using All Applicable Features, Produced a Score of 0.6722
 # The Second Section, Using Features of Importance 4000 or Higher, Produced a Score of 0.6621
+# The Third Section, Using Significant Features Based on RFE, Produced a Score of 0.6563
 
 ## Imports
 import os
