@@ -5,7 +5,7 @@ import numpy as np
 import catboost as cb
 from sklearn.metrics import roc_auc_score
 from sklearn.model_selection import KFold
-import optuna
+from sklearn.model_selection import StratifiedKFold
 
 # Using Only All Applicable Features for Modeling
 ## Loading in the Training Data
@@ -51,9 +51,8 @@ target = 'outcome_code'
 
 ## Model Training with K-Fold Cross Validation
 folds = 3
-kf = KFold(n_splits=folds, shuffle=True)
+kf = KFold(folds, shuffle=True)
 outputs = pd.DataFrame()
-
 for train_idx, test_idx in kf.split(train_df):
     train = train_df.iloc[train_idx]
     test = train_df.iloc[test_idx]
@@ -61,7 +60,6 @@ for train_idx, test_idx in kf.split(train_df):
     model.fit(train[feats], train[target])
     _df = pd.DataFrame(model.predict_proba(test[feats]), index=test.index)
     outputs = pd.concat([outputs, _df])
-
 # Feature Importance Extraction
 feature_importances = model.get_feature_importance()
 feature_names = model.feature_names_
@@ -72,19 +70,19 @@ print('---------------------------------------------------')
 print(importance_df.head(10))
 
 # Selecting Important Features
-threshold = 2.20
+threshold = 2.2
 selected_features = importance_df[importance_df['Importance'] > threshold]['Feature'].tolist()
 print(f"Selected Features: {selected_features}")
 
 folds = 3
-kf = KFold(folds, shuffle=True)
+kf = StratifiedKFold(n_splits=folds, shuffle=True)
 outputs = pd.DataFrame()
-for train_idx, test_idx in kf.split(train_df):
+for train_idx, test_idx in kf.split(train_df, train_df[target]):
     train = train_df.iloc[train_idx]
     test = train_df.iloc[test_idx]
     model = cb.CatBoostClassifier(iterations=1000, verbose=False, loss_function='MultiClassOneVsAll', eval_metric='AUC')
-    model.fit(train.loc[:, selected_features], train[target])
-    _df = pd.DataFrame(model.predict_proba(test.loc[:, selected_features]), index=test.index)
+    model.fit(train[selected_features], train[target])
+    _df = pd.DataFrame(model.predict_proba(test[selected_features]), index=test.index)
     outputs = pd.concat([outputs, _df])
 ## Post-Model Processing
 train_df = pd.concat([train_df, outputs], axis=1)
